@@ -14,6 +14,7 @@
 
 #![no_std]
 
+use core::fmt::{Debug, Formatter, Write};
 use core::time::Duration;
 
 use embedded_hal::{delay::DelayNs, digital::OutputPin};
@@ -54,10 +55,10 @@ impl Speed {
 }
 
 /// An error that occurred during DShot operation.
-#[derive(Debug)]
 pub enum Error<PIN>
 where
     PIN: OutputPin,
+    PIN::Error: Debug,
 {
     /// The provided throttle value was greater than 1999.
     OutOfBoundsError,
@@ -65,10 +66,24 @@ where
     PinError(PIN::Error),
 }
 
+impl<PIN> core::fmt::Debug for Error<PIN>
+where
+    PIN: OutputPin,
+    PIN::Error: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::OutOfBoundsError => f.write_str("OutOfBoundsError"),
+            Self::PinError(e) => f.write_fmt(format_args!("PinError<{e:?}>")),
+        }
+    }
+}
+
 /// A stateful DShot controller.
 pub struct DShotController<PIN, DELAY>
 where
     PIN: OutputPin,
+    PIN::Error: Debug,
     DELAY: DelayNs,
 {
     pin: PIN,
@@ -81,6 +96,7 @@ where
 impl<PIN, DELAY> DShotController<PIN, DELAY>
 where
     PIN: OutputPin,
+    PIN::Error: Debug,
     DELAY: DelayNs,
 {
     /// Creates a new DShot controller.
@@ -168,7 +184,7 @@ impl Frame {
         cmd
     }
 
-    /// Returns the throttle (0-1999).
+    /// Returns the throttle value (0-1999).
     fn throttle(&self) -> u16 {
         (self.0 >> 5) - 48
     }
