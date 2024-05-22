@@ -28,6 +28,7 @@ pub enum Speed {
     DShot150,
     DShot300,
     DShot600,
+    DShot1200,
 }
 
 impl Speed {
@@ -37,6 +38,7 @@ impl Speed {
             Self::DShot150 => Duration::from_nanos(5_000),
             Self::DShot300 => Duration::from_nanos(2_500),
             Self::DShot600 => Duration::from_nanos(1_250),
+            Self::DShot1200 => Duration::from_nanos(625),
         }
     }
 
@@ -47,7 +49,7 @@ impl Speed {
 
     /// The total time of one bit, both high and low.
     fn bit_time(&self) -> Duration {
-        self.one_hold_time() / 3 * 4
+        self.one_hold_time() * 4 / 3
     }
 }
 
@@ -199,7 +201,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_frame_constructs_correctly() {
+    fn speed_timings() {
+        let speed = Speed::DShot600;
+        assert_eq!(speed.one_hold_time().as_nanos(), 1_250);
+        assert_eq!(speed.zero_hold_time().as_nanos(), 625);
+        assert_eq!(speed.bit_time().as_nanos(), 1_666); // Rounding gets a little wonky here.
+    }
+
+    #[test]
+    fn frame_constructs_correctly() {
         let frame = Frame::new(998, false);
         assert_eq!(frame.throttle(), 998);
         assert!(!frame.telemetry_enabled());
@@ -207,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn test_frame_constructs_correctly_with_telemetry() {
+    fn frame_constructs_correctly_with_telemetry() {
         let frame = Frame::new(998, true);
         assert_eq!(frame.throttle(), 998);
         assert!(frame.telemetry_enabled());
