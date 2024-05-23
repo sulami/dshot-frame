@@ -1,10 +1,9 @@
 [package]
-name = "dshot"
-description = "Support for the DShot throttle protocol"
+name = "dshot-frame"
+description = "Generates frames for the DShot ESC throttle protocol"
 authors = ["Robin Schroer <cargo@sulami.xyz>"]
 version = "0.1.0"
 edition = "2021"
-keywords = ["no_std", "embedded-hal"]
+keywords = ["no_std"]
 
 [dependencies]
-embedded-hal = "1"
