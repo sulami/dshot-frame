@@ -14,7 +14,7 @@
 
 #![no_std]
 
-use core::fmt::{Debug, Formatter, Write};
+use core::fmt::{Debug, Formatter};
 use core::time::Duration;
 
 use embedded_hal::{delay::DelayNs, digital::OutputPin};
@@ -34,6 +34,7 @@ pub enum Speed {
 
 impl Speed {
     /// The time to hold the pin high for a set bit.
+    #[inline]
     fn one_hold_time(&self) -> Duration {
         match self {
             Self::DShot150 => Duration::from_nanos(5_000),
@@ -44,13 +45,25 @@ impl Speed {
     }
 
     /// The time to hold the pin high for an unset bit.
+    #[inline]
     fn zero_hold_time(&self) -> Duration {
-        self.one_hold_time() / 2
+        match self {
+            Self::DShot150 => Duration::from_nanos(2_500),
+            Self::DShot300 => Duration::from_nanos(1_250),
+            Self::DShot600 => Duration::from_nanos(625),
+            Self::DShot1200 => Duration::from_nanos(313),
+        }
     }
 
     /// The total time of one bit, both high and low.
+    #[inline]
     fn bit_time(&self) -> Duration {
-        self.one_hold_time() * 4 / 3
+        match self {
+            Self::DShot150 => Duration::from_nanos(6_667),
+            Self::DShot300 => Duration::from_nanos(3_333),
+            Self::DShot600 => Duration::from_nanos(1_667),
+            Self::DShot1200 => Duration::from_nanos(833),
+        }
     }
 }
 
@@ -125,27 +138,29 @@ where
     }
 
     /// Sends the current throttle over the wire.
+    ///
+    /// This method blocks until the entire frame is sent.
     fn send_throttle_command(&mut self, throttle: u16) -> Result<(), Error<PIN>> {
         let frame = Frame::new(throttle, self.telemetry_enabled);
-        let mut bits = frame.inner();
 
-        for _ in 0..16 {
-            self.pin.set_high().map_err(Error::PinError)?;
+        let one_up_time = self.speed.one_hold_time();
+        let zero_up_time = self.speed.zero_hold_time();
 
-            let bit = bits & 0x01;
-            let up_time = match bit {
-                0 => self.speed.zero_hold_time(),
-                1 => self.speed.one_hold_time(),
-                _ => unreachable!(),
+        let one_down_time = self.speed.bit_time() - one_up_time;
+        let zero_down_time = self.speed.bit_time() - zero_up_time;
+
+        for bit in frame.bits() {
+            if bit {
+                self.pin.set_high().map_err(Error::PinError)?;
+                self.delay.delay_ns(one_up_time.as_nanos() as u32);
+                self.pin.set_low().map_err(Error::PinError)?;
+                self.delay.delay_ns(one_down_time.as_nanos() as u32);
+            } else {
+                self.pin.set_high().map_err(Error::PinError)?;
+                self.delay.delay_ns(zero_up_time.as_nanos() as u32);
+                self.pin.set_low().map_err(Error::PinError)?;
+                self.delay.delay_ns(zero_down_time.as_nanos() as u32);
             };
-            self.delay.delay_ns(up_time.as_nanos() as u32);
-
-            self.pin.set_low().map_err(Error::PinError)?;
-
-            let down_time = self.speed.bit_time() - up_time;
-            self.delay.delay_ns(down_time.as_nanos() as u32);
-
-            bits >>= 1;
         }
 
         Ok(())
@@ -210,6 +225,20 @@ impl Frame {
     fn inner(&self) -> u16 {
         self.0
     }
+
+    /// Returns an array of booleans describing the bits.
+    fn bits(&self) -> [bool; 16] {
+        let mut value = self.0.reverse_bits();
+        let mut rv = [false; 16];
+        for item in rv.iter_mut() {
+            let bit = value & 0x0001;
+            if bit != 0 {
+                *item = true;
+            }
+            value >>= 1;
+        }
+        rv
+    }
 }
 
 #[cfg(test)]
@@ -217,11 +246,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bits_works() {
+        let frame = Frame::new(999, false);
+        assert_eq!(
+            frame.bits(),
+            [
+                true, false, false, false, false, false, true, false, true, true, true, false,
+                false, true, false, false
+            ]
+        );
+    }
+
+    #[test]
     fn speed_timings() {
         let speed = Speed::DShot600;
         assert_eq!(speed.one_hold_time().as_nanos(), 1_250);
         assert_eq!(speed.zero_hold_time().as_nanos(), 625);
-        assert_eq!(speed.bit_time().as_nanos(), 1_666); // Rounding gets a little wonky here.
+        assert_eq!(speed.bit_time().as_nanos(), 1_667);
     }
 
     #[test]
