@@ -1,9 +1,12 @@
 [package]
 name = "dshot-frame"
-description = "Generates frames for the DShot ESC throttle protocol"
+description = "Generates frames for the DShot ESC protocol"
 authors = ["Robin Schroer <cargo@sulami.xyz>"]
 version = "0.1.0"
 edition = "2021"
-keywords = ["no_std"]
-
-[dependencies]
+keywords = ["dshot"]
+categories = ["aerospace::protocols", "no-std"]
+license = "MIT"
+homepage = "https://github.com/sulami/dshot-frame"
+repository = "https://github.com/sulami/dshot-frame"
+exclude = [".idea"]

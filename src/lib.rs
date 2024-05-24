@@ -7,6 +7,29 @@
 //!
 //! It is transmitted over the wire at a fixed speed, with ones and zeroes both being pulses, but
 //! ones being twice as long as zeroes.
+//!
+//! ## Usage
+//!
+//! This example is adapted from an embassy-stm32 codebase:
+//!
+//! ```ignore
+//! let mut pwm = SimplePwm::new(
+//!     timer,
+//!     Some(PwmPin::new_ch1(pin, OutputType::PushPull)),
+//!     None,
+//!     None,
+//!     None,
+//!     Hertz(150_000),
+//!     CountingMode::EdgeAlignedUp,
+//! );
+//! let max_duty_cycle = pwm.get_max_duty() as u16;
+//!
+//! let frame = Frame::new(1000, false).unwrap();
+//! pwm.waveform_up(&mut dma, Ch1, &frame.duty_cycles()).await;
+//! // Pull the line low after sending a frame.
+//! pwm.set_duty(channel, 0);
+//! pwm.enable(channel);
+//! ```
 
 // TODO Bidirectional DShot
 
@@ -22,6 +45,11 @@ impl Frame {
     /// Creates a new frame with the given speed (0-1999) and telemetry request.
     ///
     /// Returns [`None`] if the speed is out of bounds.
+    ///
+    /// ```
+    /// # use dshot_frame::*;
+    /// assert_eq!(Frame::new(1000, false).unwrap().speed(), 1000);
+    /// ```
     pub fn new(speed: u16, request_telemetry: bool) -> Option<Self> {
         if speed >= 2000 {
             return None;
