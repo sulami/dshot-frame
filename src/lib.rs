@@ -110,14 +110,14 @@ impl Frame {
     /// This contains an extra element that is always zero to ensure the PWM output gets pulled low
     /// at the end of the sequence. It can be sliced off if not needed.
     pub fn duty_cycles(&self, max_duty_cycle: u16) -> [u16; 17] {
-        let mut value = self.inner.reverse_bits();
+        let mut value = self.inner;
         let mut rv = [max_duty_cycle * 3 / 4; 17];
         for item in rv.iter_mut() {
-            let bit = value & 0x0001;
-            if bit != 0 {
+            let bit = value & 0x8000;
+            if bit == 0 {
                 *item = max_duty_cycle * 3 / 8;
             }
-            value >>= 1;
+            value <<= 1;
         }
         rv[16] = 0;
         rv
@@ -202,12 +202,31 @@ pub enum Command {
 mod tests {
     use super::*;
 
+    const MAX_DUTY_CYCLE: u16 = 100;
+    const ZERO: u16 = 37;
+    const ONE: u16 = 75;
+
     #[test]
     fn duty_cycles_works() {
         let frame = Frame::new(999, false).unwrap();
         assert_eq!(
-            frame.duty_cycles(100),
-            [37, 75, 75, 75, 75, 75, 37, 75, 37, 37, 37, 75, 75, 37, 75, 75, 0]
+            frame.duty_cycles(MAX_DUTY_CYCLE),
+            [
+                ONE, ZERO, ZERO, ZERO, ZERO, ZERO, ONE, ZERO, ONE, ONE, ONE, ZERO, ZERO, ONE, ZERO,
+                ZERO, 0
+            ]
+        );
+    }
+
+    #[test]
+    fn duty_cycles_at_zero() {
+        let frame = Frame::command(Command::MotorStop, false);
+        assert_eq!(
+            frame.duty_cycles(MAX_DUTY_CYCLE),
+            [
+                ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO,
+                ZERO, ZERO, 0
+            ]
         );
     }
 
@@ -225,6 +244,12 @@ mod tests {
         assert_eq!(frame.speed(), 998);
         assert!(frame.telemetry_enabled());
         assert_eq!(frame.crc(), 0x07);
+    }
+
+    #[test]
+    fn frame_constructs_correctly_off_centre() {
+        let frame = Frame::new(50, false).unwrap();
+        assert_eq!(frame.speed(), 50);
     }
 
     #[test]
