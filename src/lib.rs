@@ -1,7 +1,5 @@
 //! Support for the DShot ESC protocol
 //!
-//! This crate provides
-//!
 //! DShot has two-byte frames, where the first 11 bits are the throttle speed, bit 12 is a
 //! telemetry request flag, and the last four bits are a checksum.
 //!
@@ -10,12 +8,12 @@
 //! It is transmitted over the wire at a fixed speed, with ones and zeroes both being pulses, but
 //! ones being twice as long as zeroes.
 
-// TODO Special commands
-//      Bidirectional DShot
+// TODO Bidirectional DShot
 
 #![no_std]
 
 /// A frame of two bytes that get send over the wire.
+#[derive(Copy, Clone, Debug)]
 pub struct Frame {
     inner: u16,
 }
@@ -30,14 +28,26 @@ impl Frame {
         }
 
         let translated_throttle = (speed + 48) << 5;
-        let mut cmd = Self {
+        let mut frame = Self {
             inner: translated_throttle,
         };
         if request_telemetry {
-            cmd.inner |= 0x10;
+            frame.inner |= 0x10;
         }
-        cmd.compute_crc();
-        Some(cmd)
+        frame.compute_crc();
+        Some(frame)
+    }
+
+    /// Creates a new frame with the given [`Command`] and telemetry request.
+    pub fn command(command: Command, request_telemetry: bool) -> Self {
+        let mut frame = Self {
+            inner: (command as u16) << 5,
+        };
+        if request_telemetry {
+            frame.inner |= 0x10;
+        }
+        frame.compute_crc();
+        frame
     }
 
     /// Returns the speed value (0-1999).
@@ -86,12 +96,86 @@ impl Frame {
     }
 }
 
+/// Fixed commands that occupy the lower 48 speed values.
+///
+/// Some commands need to be sent multiple times to be acted upon to prevent accidental bit-flips
+/// wreaking havoc.
+#[derive(Copy, Clone, Debug)]
+pub enum Command {
+    MotorStop = 0,
+    /// Wait at least 260ms before next command.
+    Beep1,
+    /// Wait at least 260ms before next command.
+    Beep2,
+    /// Wait at least 260ms before next command.
+    Beep3,
+    /// Wait at least 260ms before next command.
+    Beep4,
+    /// Wait at least 260ms before next command.
+    Beep5,
+    /// Wait at least 12ms before next command.
+    ESCInfo,
+    /// Needs 6 transmissions.
+    SpinDirection1,
+    /// Needs 6 transmissions.
+    SpinDirection2,
+    /// Needs 6 transmissions.
+    ThreeDModeOn,
+    /// Needs 6 transmissions.
+    ThreeDModeOff,
+    SettingsRequest,
+    /// Needs 6 transmissions. Wait at least 35ms before next command.
+    SettingsSave,
+    /// Needs 6 transmissions.
+    ExtendedTelemetryEnable,
+    /// Needs 6 transmissions.
+    ExtendedTelemetryDisable,
+
+    // 15-19 are unassigned.
+    /// Needs 6 transmissions.
+    SpinDirectionNormal = 20,
+    /// Needs 6 transmissions.
+    SpinDirectonReversed,
+    Led0On,
+    Led1On,
+    Led2On,
+    Led3On,
+    Led0Off,
+    Led1Off,
+    Led2Off,
+    Led3Off,
+    AudioStreamModeToggle,
+    SilentModeToggle,
+    /// Needs 6 transmissions. Enables individual signal line commands.
+    SignalLineTelemetryEnable,
+    /// Needs 6 transmissions. Disables individual signal line commands.
+    SignalLineTelemetryDisable,
+    /// Needs 6 transmissions. Enables individual signal line commands.
+    SignalLineContinuousERPMTelemetry,
+    /// Needs 6 transmissions. Enables individual signal line commands.
+    SignalLineContinuousERPMPeriodTelemetry,
+
+    // 36-41 are unassigned.
+    /// 1ºC per LSB.
+    SignalLineTemperatureTelemetry = 42,
+    /// 10mV per LSB, 40.95V max.
+    SignalLineVoltageTelemetry,
+    /// 100mA per LSB, 409.5A max.
+    SignalLineCurrentTelemetry,
+    /// 10mAh per LSB, 40.95Ah max.
+    SignalLineConsumptionTelemetry,
+    /// 100erpm per LSB, 409500erpm max.
+    SignalLineERPMTelemetry,
+    /// 16us per LSB, 65520us max.
+    SignalLineERPMPeriodTelemetry,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn bits_works() {
+    fn duty_cycles_works() {
         let frame = Frame::new(999, false).unwrap();
         assert_eq!(
             frame.duty_cycles(100),
