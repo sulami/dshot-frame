@@ -1,0 +1,6 @@
+sign-commit = true
+sign-tag = true
+pre-release-hook = ["git", "cliff", "-o", "CHANGELOG.md", "--tag", "{{version}}"]
+pre-release-replacements = [
+    { file = "Cargo.toml", search = "version = .*", replace = "version = \"{{version}}\"" },
+]
