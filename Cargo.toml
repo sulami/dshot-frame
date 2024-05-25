@@ -2,7 +2,7 @@
 name = "dshot-frame"
 description = "Generates frames for the DShot ESC protocol"
 authors = ["Robin Schroer <cargo@sulami.xyz>"]
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 keywords = ["dshot"]
 categories = ["aerospace::protocols", "no-std"]

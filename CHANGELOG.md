@@ -2,13 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2024-05-25
+
+[d3b2f3e](d3b2f3ef9edd55484c57a544b14e6370cde08d7c)...[55c6c13](55c6c1301a6ef9e78aeea5925b87bd36d347ebde)
+
+### Bug Fixes
+
+- Fix the changelog for 0.1.1 ([55c6c13](55c6c1301a6ef9e78aeea5925b87bd36d347ebde))
+
+### Features
+
+- Add a GitHub Actions Action to tag releases ([387f98a](387f98a4a95f79a1d56488d4321866bc8f10ff6b))
+
 ## [0.1.2] - 2024-05-25
+
+[4adbb00](4adbb00bbea75727781da42e5e9315a4aa50d979)...[d3b2f3e](d3b2f3ef9edd55484c57a544b14e6370cde08d7c)
 
 ### Features
 
 - Add a changelog and release config ([d096d5b](d096d5b66d9f6183f086b4febf3c0c5155728b5f))
 
-## [0.1.1] - 2024-05-24
+### Miscellaneous Tasks
+
+- Release dshot-frame version 0.1.2 ([d3b2f3e](d3b2f3ef9edd55484c57a544b14e6370cde08d7c))
+
+## [0.1.1] - 2024-05-25
+
+[887bcd5](887bcd5f6170e6064510a9751f4fb0d45232fa83)...[4adbb00](4adbb00bbea75727781da42e5e9315a4aa50d979)
 
 ### Bug Fixes
 
