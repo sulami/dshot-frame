@@ -58,7 +58,7 @@ impl DshotProtocol for NormalDshot {
     }
 
     fn get_translated_throttle(speed: u16) -> u16 {
-        speed + 48 << 5
+        (speed + 48) << 5
     }
 }
 
@@ -95,7 +95,7 @@ impl<P: DshotProtocol> Frame<P> {
     ///
     /// ```
     /// # use dshot_frame::*;
-    /// assert_eq!(Frame::<NormalDshot>(1000, false).unwrap().speed(), 1000);
+    /// assert_eq!(Frame::<NormalDshot>::new(1000, false).unwrap().speed(), 1000);
     /// ```
     pub fn new(speed: u16, request_telemetry: bool) -> Option<Self> {
         if speed >= 2000 {
@@ -281,7 +281,7 @@ impl ErpmTelemetry {
         }
 
         let shift = ((payload >> 9) & 0x07) as u8;
-        let period_base = (payload & 0x1FF) as u16;
+        let period_base = payload & 0x1FF;
 
         Some(Self {
             shift,
@@ -383,27 +383,11 @@ mod tests {
     fn frame_rejects_invalid_speed_values() {
         assert!(NormalFrame::new(2000, false).is_none())
     }
-}
-
-
-#[cfg(test)]
-mod bidi_and_telemetry_tests {
-    use super::*;
-
-    const MAX_DUTY_CYCLE: u16 = 100;
-    const ZERO: u16 = 37;
-    const ONE: u16 = 75;
 
     #[test]
-    fn duty_cycles_works() {
-        // let frame = BidirectionalFrame::new(999, true).unwrap();
+    fn bidirectional_throttle_works() {
         let thr = BidirectionalDshot::get_translated_throttle(999);
         assert_eq!(thr, 0b011_1110_1000_00000)
-        // assert_eq!(
-        //     frame.duty_cycles(MAX_DUTY_CYCLE),
-        //     [
-        //         ZERO, ONE, ONE, ONE, ONE, ONE, ZERO, ONE, ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ZERO, 0
-        //     ]
-        // );
     }
 }
+
