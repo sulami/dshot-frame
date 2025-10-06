@@ -41,7 +41,17 @@ pub trait DshotProtocol {
     /// Returns `true` if the signal is inverted (bidirectional mode).
     fn is_inverted() -> bool;
 
+    /// Translates the throttle value (0–1999) into the 11-bit encoded format.
     fn get_translated_throttle(speed: u16) -> u16;
+
+    /// Sets or clears the telemetry flag bit in the provided frame.
+    fn set_telemetry_flag(inner: &mut u16, enable: bool);
+
+    /// Returns `true` if telemetry is enabled in the given frame value.
+    fn is_telemetry_enabled(inner: u16) -> bool;
+
+    /// Translates the Command into the 11-bit encoded format.
+    fn command_inner(command: Command) -> u16;
 }
 
 /// Standard (non-inverted) DShot protocol.
@@ -59,6 +69,22 @@ impl DshotProtocol for NormalDshot {
 
     fn get_translated_throttle(speed: u16) -> u16 {
         (speed + 48) << 5
+    }
+
+    fn set_telemetry_flag(inner: &mut u16, enable: bool) {
+        if enable {
+            *inner |= 0x10;
+        } else {
+            *inner &= !0x10;
+        }
+    }
+
+    fn is_telemetry_enabled(inner: u16) -> bool {
+        inner & 0x10 != 0
+    }
+
+    fn command_inner(command: Command) -> u16 {
+        (command as u16) << 5
     }
 }
 
@@ -78,6 +104,23 @@ impl DshotProtocol for BidirectionalDshot {
     fn get_translated_throttle(speed: u16) -> u16 {
         let mask = 0b111_1111_1111;
         (!(speed + 48) & mask) << 5
+    }
+
+    fn set_telemetry_flag(inner: &mut u16, enable: bool) {
+        if enable {
+            *inner &= !0x10;
+        } else {
+            *inner |= 0x10;
+        }
+    }
+
+    fn is_telemetry_enabled(inner: u16) -> bool {
+        inner & 0x10 == 0
+    }
+
+    fn command_inner(command: Command) -> u16 {
+        let mask = 0b111_1111_1111;
+        (!(command as u16) & mask) << 5
     }
 }
 
@@ -107,9 +150,7 @@ impl<P: DshotProtocol> Frame<P> {
             inner: translated_throttle,
             _protocol: core::marker::PhantomData,
         };
-        if request_telemetry {
-            frame.inner |= 0x10;
-        }
+        frame.set_telemetry_flag(request_telemetry);
         frame.compute_crc();
         Some(frame)
     }
@@ -117,29 +158,38 @@ impl<P: DshotProtocol> Frame<P> {
     /// Creates a new frame with the given [`Command`] and telemetry request.
     pub fn command(command: Command, request_telemetry: bool) -> Self {
         let mut frame = Self {
-            inner: (command as u16) << 5,
+            inner: P::command_inner(command),
             _protocol: core::marker::PhantomData,
         };
-        if request_telemetry {
-            frame.inner |= 0x10;
-        }
+        frame.set_telemetry_flag(request_telemetry);
         frame.compute_crc();
         frame
     }
 
-    /// Returns the speed value (0-1999).
+    /// Returns the speed value (0–1999).
     pub fn speed(&self) -> u16 {
-        (self.inner >> 5) - 48
+        let raw = self.inner >> 5;
+        if P::is_inverted() {
+            let mask = 0b111_1111_1111;
+            ((!raw) & mask).saturating_sub(48)
+        } else {
+            raw.saturating_sub(48)
+        }
     }
 
     /// Returns whether telemetry is enabled.
     pub fn telemetry_enabled(&self) -> bool {
-        self.inner & 0x10 != 0
+        P::is_telemetry_enabled(self.inner)
     }
 
     /// Returns the CRC checksum.
     pub fn crc(&self) -> u16 {
         self.inner & 0x0F
+    }
+
+    /// Sets or clears the telemetry flag bit in the provided frame.
+    fn set_telemetry_flag(&mut self, enable: bool) {
+        P::set_telemetry_flag(&mut self.inner, enable);
     }
 
     /// Computes the CRC based on the first 12 bits and ORs it in.
@@ -389,5 +439,42 @@ mod tests {
         let thr = BidirectionalDshot::get_translated_throttle(999);
         assert_eq!(thr, 0b011_1110_1000_00000)
     }
-}
 
+    #[test]
+    fn check_bidir_crc() {
+        let crc = BidirectionalDshot::compute_crc(0b100_0001_0110_0);
+        assert_eq!(crc, 0b1001);
+    }
+
+    #[test]
+    fn bidir_duty_cycles_works() {
+        let frame = BidirectionalFrame::new(953, true).unwrap();
+        assert_eq!(
+            frame.duty_cycles(MAX_DUTY_CYCLE),
+            [
+                ONE, ZERO, ZERO, ZERO, ZERO, ZERO, ONE, ZERO, ONE, ONE, ZERO, ZERO, ONE, ZERO,
+                ZERO, ONE, 0
+            ]
+        );
+    }
+
+    #[test]
+    fn bidir_duty_cycles_at_zero() {
+        let frame = BidirectionalFrame::command(Command::MotorStop, false);
+        assert_eq!(
+            frame.duty_cycles(MAX_DUTY_CYCLE),
+            [
+                ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ZERO, ZERO, ZERO, ZERO,
+                0
+            ]
+        );
+    }
+
+    #[test]
+    fn bidir_frame_constructs_correctly_with_telemetry() {
+        let frame = BidirectionalFrame::new(953, true).unwrap();
+        assert_eq!(frame.speed(), 953);
+        assert!(frame.telemetry_enabled());
+        assert_eq!(frame.crc(), 0b1001);
+    }
+}
