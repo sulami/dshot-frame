@@ -40,8 +40,6 @@ pub trait DshotProtocol {
 
     /// Returns `true` if the signal is inverted (bidirectional mode).
     fn is_inverted() -> bool;
-
-    fn get_translated_throttle(speed: u16) -> u16;
 }
 
 /// Standard (non-inverted) DShot protocol.
@@ -56,10 +54,6 @@ impl DshotProtocol for NormalDshot {
     fn is_inverted() -> bool {
         false
     }
-
-    fn get_translated_throttle(speed: u16) -> u16 {
-        (speed + 48) << 5
-    }
 }
 
 /// Bidirectional (inverted) DShot protocol.
@@ -73,11 +67,6 @@ impl DshotProtocol for BidirectionalDshot {
 
     fn is_inverted() -> bool {
         true
-    }
-
-    fn get_translated_throttle(speed: u16) -> u16 {
-        let mask = 0b111_1111_1111;
-        (!(speed + 48) & mask) << 5
     }
 }
 
@@ -102,7 +91,7 @@ impl<P: DshotProtocol> Frame<P> {
             return None;
         }
 
-        let translated_throttle = P::get_translated_throttle(speed);
+        let translated_throttle = (speed + 48) << 5;
         let mut frame = Self {
             inner: translated_throttle,
             _protocol: core::marker::PhantomData,
@@ -160,11 +149,11 @@ impl<P: DshotProtocol> Frame<P> {
     /// at the end of the sequence. It can be sliced off if not needed.
     pub fn duty_cycles(&self, max_duty_cycle: u16) -> [u16; 17] {
         let mut value = self.inner;
-        let mut rv = [max_duty_cycle * 3 / 4; 17];
+        let mut rv = [max_duty_cycle * 2 / 3; 17];
         for item in rv.iter_mut() {
             let bit = value & 0x8000;
             if bit == 0 {
-                *item = max_duty_cycle * 3 / 8;
+                *item = max_duty_cycle / 3;
             }
             value <<= 1;
         }
@@ -330,8 +319,8 @@ mod tests {
     use super::*;
 
     const MAX_DUTY_CYCLE: u16 = 100;
-    const ZERO: u16 = 37;
-    const ONE: u16 = 75;
+    const ZERO: u16 = MAX_DUTY_CYCLE / 3;
+    const ONE: u16 = ZERO * 2;
 
     #[test]
     fn duty_cycles_works() {
@@ -385,9 +374,14 @@ mod tests {
     }
 
     #[test]
-    fn bidirectional_throttle_works() {
-        let thr = BidirectionalDshot::get_translated_throttle(999);
-        assert_eq!(thr, 0b011_1110_1000_00000)
+    fn bidir_duty_cycles_works() {
+        let frame = BidirectionalFrame::new(998, false).unwrap();
+        assert_eq!(
+            frame.duty_cycles(MAX_DUTY_CYCLE),
+            [
+                ONE, ZERO, ZERO, ZERO, ZERO, ZERO, ONE, ZERO, ONE, ONE, ZERO, ZERO, ONE, ZERO,
+                ZERO, ONE, 0
+            ]
+        );
     }
 }
-
