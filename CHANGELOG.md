@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2025-10-18
+
+[12e94dc](12e94dc03783e7428ef8fbcf02d8e45c166bb17e)...[b340be1](b340be17d489308805d206e71a738ae0c24a9bd2)
+
+### Bug Fixes
+
+- Fix bidirectional DShot and add tests ([b340be1](b340be17d489308805d206e71a738ae0c24a9bd2))
+
+## [0.2.0] - 2025-10-18
+
+[e59b039](e59b0390cb9133cb211fe6e3f61c4d17867b8cf3)...[12e94dc](12e94dc03783e7428ef8fbcf02d8e45c166bb17e)
+
+### Features
+
+- Add support for bidirectional DShot ([70df27e](70df27e0602a673bd1e70a26684137d8c4dca394))
+
+### Miscellaneous Tasks
+
+- Release dshot-frame version 0.2.0 ([12e94dc](12e94dc03783e7428ef8fbcf02d8e45c166bb17e))
+
 ## [0.1.3] - 2024-05-25
 
 [d3b2f3e](d3b2f3ef9edd55484c57a544b14e6370cde08d7c)...[e59b039](e59b0390cb9133cb211fe6e3f61c4d17867b8cf3)
