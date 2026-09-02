@@ -2,13 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-09-02
+
+[cc04ed3](cc04ed39d0de1890f1059939ec34709e37d86e4a)...[c8dc961](c8dc961872e74655c9f3aecb8626684b9021ce8e)
+
+### Bug Fixes
+
+- Fix a typo in Command::SpinDirectionReversed ([c8dc961](c8dc961872e74655c9f3aecb8626684b9021ce8e)), Resolves #7.
+
 ## [0.2.1] - 2025-10-18
 
-[12e94dc](12e94dc03783e7428ef8fbcf02d8e45c166bb17e)...[b340be1](b340be17d489308805d206e71a738ae0c24a9bd2)
+[12e94dc](12e94dc03783e7428ef8fbcf02d8e45c166bb17e)...[cc04ed3](cc04ed39d0de1890f1059939ec34709e37d86e4a)
 
 ### Bug Fixes
 
 - Fix bidirectional DShot and add tests ([b340be1](b340be17d489308805d206e71a738ae0c24a9bd2))
+
+### Miscellaneous Tasks
+
+- Release dshot-frame version 0.2.1 ([cc04ed3](cc04ed39d0de1890f1059939ec34709e37d86e4a))
 
 ## [0.2.0] - 2025-10-18
 
