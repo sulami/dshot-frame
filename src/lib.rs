@@ -205,7 +205,7 @@ pub enum Command {
     /// Needs 6 transmissions.
     SpinDirectionNormal = 20,
     /// Needs 6 transmissions.
-    SpinDirectonReversed,
+    SpinDirectionReversed,
     Led0On,
     Led1On,
     Led2On,
