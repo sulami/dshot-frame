@@ -249,14 +249,53 @@ pub enum Command {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ErpmTelemetry {
     /// Raw 3-bit shift value (0–7)
-    pub shift: u8,
+    shift: u8,
     /// Raw 9-bit period base (0–511)
-    pub period_base: u16,
+    period_base: u16,
     /// Raw 4-bit CRC (for debugging)
-    pub crc: u8,
+    crc: u8,
 }
 
 impl ErpmTelemetry {
+    /// Returns the 3-bit shift value (0-7).
+    pub fn shift(&self) -> u8 {
+        self.shift
+    }
+
+    /// Returns the 9-bit period base (0-511).
+    pub fn period_base(&self) -> u16 {
+        self.period_base
+    }
+
+    /// Returns the 4-bit CRC.
+    pub fn crc(&self) -> u8 {
+        self.crc
+    }
+
+    /// Sets the 3-bit shift value (0-7). Recalculates the CRC accordingly.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shift value is out of bounds (> 7).
+    pub fn set_shift(&mut self, shift: u8) {
+        assert!(shift <= 7, "Shift value needs to be within 0..=7");
+
+        self.shift = shift;
+        self.crc = NormalDshot::compute_crc((self.shift as u16) << 9 | self.period_base) as u8;
+    }
+
+    /// Sets the 9-bit period-base (0-511). Recalculates the CRC accordingly.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the period base is out of bounds (> 511).
+    pub fn set_period_base(&mut self, period_base: u16) {
+        assert!(period_base <= 511, "Period base needs to be within 0..=511");
+
+        self.period_base = period_base;
+        self.crc = NormalDshot::compute_crc((self.shift as u16) << 9 | self.period_base) as u8;
+    }
+
     /// Attempts to parse a 16-bit raw telemetry value.
     ///
     /// Returns `None` if the CRC is invalid.
@@ -371,6 +410,56 @@ mod tests {
     #[test]
     fn frame_rejects_invalid_speed_values() {
         assert!(NormalFrame::new(2000, false).is_none())
+    }
+
+    #[test]
+    fn telemetry_setters_recompute_crc() {
+        let mut telemetry = ErpmTelemetry::try_from_raw(0x4646).unwrap();
+
+        telemetry.set_shift(5);
+        assert_eq!(
+            telemetry.crc(),
+            NormalDshot::compute_crc((telemetry.shift() as u16) << 9 | telemetry.period_base())
+                as u8
+        );
+
+        telemetry.set_period_base(42);
+        assert_eq!(
+            telemetry.crc(),
+            NormalDshot::compute_crc((telemetry.shift() as u16) << 9 | telemetry.period_base())
+                as u8
+        );
+    }
+
+    #[test]
+    fn telemetry_setters_preserve_round_trip() {
+        let mut telemetry = ErpmTelemetry::try_from_raw(0x4646).unwrap();
+        telemetry.set_shift(5);
+        telemetry.set_period_base(42);
+        assert_eq!(ErpmTelemetry::try_from_raw(telemetry.to_raw()), Some(telemetry));
+    }
+
+    #[test]
+    #[should_panic(expected = "Shift value needs to be within 0..=7")]
+    fn telemetry_set_shift_panics_on_out_of_bounds() {
+        let mut telemetry = ErpmTelemetry::try_from_raw(0x4646).unwrap();
+        telemetry.set_shift(8);
+    }
+
+    #[test]
+    #[should_panic(expected = "Period base needs to be within 0..=511")]
+    fn telemetry_set_period_base_panics_on_out_of_bounds() {
+        let mut telemetry = ErpmTelemetry::try_from_raw(0x4646).unwrap();
+        telemetry.set_period_base(512);
+    }
+
+    #[test]
+    fn telemetry_setters_update_values() {
+        let mut telemetry = ErpmTelemetry::try_from_raw(0x4646).unwrap();
+        telemetry.set_shift(5);
+        assert_eq!(telemetry.shift(), 5);
+        telemetry.set_period_base(42);
+        assert_eq!(telemetry.period_base(), 42);
     }
 
     #[test]
