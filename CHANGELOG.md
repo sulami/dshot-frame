@@ -2,13 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-09-02
+
+[c9824ac](c9824ac3c4cd7191707649c6ebc1a989b3a9ef12)...[1628f28](1628f28abb86c6e2dfc84ef1da0e7e5388906618)
+
+### Features
+
+- Make ErpmTelemetry fields private with accessors ([1628f28](1628f28abb86c6e2dfc84ef1da0e7e5388906618)), Resolves #5, #6.
+
 ## [0.3.0] - 2026-09-02
 
-[cc04ed3](cc04ed39d0de1890f1059939ec34709e37d86e4a)...[c8dc961](c8dc961872e74655c9f3aecb8626684b9021ce8e)
+[cc04ed3](cc04ed39d0de1890f1059939ec34709e37d86e4a)...[c9824ac](c9824ac3c4cd7191707649c6ebc1a989b3a9ef12)
 
 ### Bug Fixes
 
 - Fix a typo in Command::SpinDirectionReversed ([c8dc961](c8dc961872e74655c9f3aecb8626684b9021ce8e)), Resolves #7.
+
+### Miscellaneous Tasks
+
+- Release dshot-frame version 0.3.0 ([c9824ac](c9824ac3c4cd7191707649c6ebc1a989b3a9ef12))
 
 ## [0.2.1] - 2025-10-18
 
